@@ -19,4 +19,4 @@ jobs:
       - run: echo ${{ env.PUB_FEED_ACCESS_TOKEN }} | dart pub token add ${{ env.PUB_FEED }}
         env:
           PUB_FEED_ACCESS_TOKEN: ${{secrets.PUB_FEED_ACCESS_TOKEN}}
-      - run: dart pub publish --dry-run --server ${{ env.PUB_FEED }}
+      - run: dart pub publish --server ${{ env.PUB_FEED }}
