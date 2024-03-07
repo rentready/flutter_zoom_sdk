@@ -4,6 +4,7 @@ version: 1.2.0+7
 homepage: https://github.com/evilrat/flutter_zoom_sdk
 repository: https://github.com/evilrat/flutter_zoom_sdk
 issue_tracker: https://github.com/evilrat/flutter_zoom_sdk/issues
+publish_to: https://rentready.jfrog.io/artifactory/api/pub/rentready-local-pub
 
 environment:
   sdk: ">=2.18.0 <4.0.0"
