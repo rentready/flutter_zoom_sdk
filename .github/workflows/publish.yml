@@ -2,7 +2,7 @@ name: Publish
 
 on:
   push:
-    branches: [ "master", "fix_publish" ]
+    branches: [ "master" ]
 
 env:
   PUB_FEED: ${{ secrets.PUB_FEED }}
