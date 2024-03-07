@@ -2,7 +2,7 @@ name: Publish
 
 on:
   push:
-    branches: [ "master", "fix_flutter_sdk" ]
+    branches: [ "master" ]
 
 jobs:
   publish:
