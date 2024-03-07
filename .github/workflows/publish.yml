@@ -5,7 +5,8 @@ on:
     branches: [ "master", "fix_publish" ]
 
 env:
-  PUB_FEED: ${{secrets.PUB_FEED}}
+  PUB_FEED: ${{ secrets.PUB_FEED }}
+  PUB_FEED_ACCESS_TOKEN: ${{ secrets.PUB_FEED_ACCESS_TOKEN }}
 
 jobs:
   publish:
@@ -16,7 +17,5 @@ jobs:
         with:
           flutter-version: '3.13.9'
           channel: 'stable'
-      - run: echo ${{ env.PUB_FEED_ACCESS_TOKEN }} | dart pub token add ${{ env.PUB_FEED }}
-        env:
-          PUB_FEED_ACCESS_TOKEN: ${{secrets.PUB_FEED_ACCESS_TOKEN}}
-      - run: dart pub publish --server ${{ env.PUB_FEED }}
+      - run: echo ${{ PUB_FEED_ACCESS_TOKEN }} | dart pub token add ${{ PUB_FEED }}
+      - run: dart pub publish --server ${{ PUB_FEED }}
