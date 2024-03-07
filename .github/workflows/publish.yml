@@ -18,4 +18,4 @@ jobs:
           flutter-version: '3.13.9'
           channel: 'stable'
       - run: echo $PUB_FEED_ACCESS_TOKEN | dart pub token add $PUB_FEED
-      - run: dart pub publish --dry-run --force
+      - run: dart pub publish --force
