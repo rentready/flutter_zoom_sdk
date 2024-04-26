@@ -18,24 +18,19 @@ class ZoomView extends ZoomPlatform {
   /// The event channel used to interact with the native platform init function
   @override
   Future<List> initZoom(ZoomOptions options) async {
-    var optionMap = <String, String?>{};
+    var optionsMap = <String, Map>{};
+    var initOptionsMap = <String, String?>{};
 
-    if (options.appKey != null) {
-      optionMap.putIfAbsent("appKey", () => options.appKey!);
-    }
-    if (options.appSecret != null) {
-      optionMap.putIfAbsent("appSecret", () => options.appSecret!);
-    }
-    if (options.returnBtnMsg != null) {
-      optionMap.putIfAbsent("returnBtnMsg", () => options.returnBtnMsg!);
-    }
-    if (options.jwtToken != null) {
-      optionMap.putIfAbsent('jwtToken', () => options.jwtToken!);
-    }
+    initOptionsMap.putIfAbsent("appKey", () => options.appKey);
+    initOptionsMap.putIfAbsent("appSecret", () => options.appSecret);
+    initOptionsMap.putIfAbsent("returnBtnMsg", () => options.returnBtnMsg);
+    initOptionsMap.putIfAbsent("jwtToken", () => options.jwtToken);
+    initOptionsMap.putIfAbsent("domain", () => options.domain);
 
-    optionMap.putIfAbsent("domain", () => options.domain);
+    optionsMap.putIfAbsent('initOptions', () => initOptionsMap);
+
     return await channel
-        .invokeMethod<List>('init', optionMap)
+        .invokeMethod<List>('init', optionsMap)
         .then<List>((List? value) => value ?? List.empty());
   }
 
