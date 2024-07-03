@@ -8,24 +8,6 @@
 #include "zoom_sdk_def.h"
 
 BEGIN_ZOOM_SDK_NAMESPACE
-/*! \enum SharingStatus
-    \brief Sharing status.
-    Here are more detailed structural descriptions..
-*/
-enum SharingStatus
-{
-	Sharing_Self_Send_Begin,///<Begin to share by the user himself.
-	Sharing_Self_Send_End,///<Stop sharing by the user.
-	Sharing_Self_Send_Pure_Audio_Begin,///<Begin to share pure audio by the user himself.
-	Sharing_Self_Send_Pure_Audio_End,///<Stop sharing pure audio by the user.
-	Sharing_Other_Share_Begin,///<Others begin to share.
-	Sharing_Other_Share_End,///<Others stop sharing.
-	Sharing_Other_Share_Pure_Audio_Begin,///<Others begin to share pure audio.
-	Sharing_Other_Share_Pure_Audio_End,///<Others stop sharing pure audio.
-	Sharing_View_Other_Sharing,///<View the sharing of others.
-	Sharing_Pause,///<Pause sharing.
-	Sharing_Resume,///<Resume sharing.
-};
 /*! \enum ShareSettingType
 	\brief Share setting type.
 	Here are more detailed structural descriptions..
@@ -56,8 +38,8 @@ enum AudioShareMode
 typedef struct tagViewableShareSource
 {
 	unsigned int userid;///<User ID.
-	bool isShowingInFirstView;///<Display or not on the primary view.
-	bool isShowingInSecondView;///<Display or not on the secondary view. 
+	bool isShowingInFirstView;///<Display or not on the primary view. Valid for ZOOM style only.
+	bool isShowingInSecondView;///<Display or not on the secondary view. Valid for ZOOM style only.
 	bool isCanBeRemoteControl;///<Enable or disable the remote control.
 	tagViewableShareSource()
 	{
@@ -123,7 +105,7 @@ public:
 	/// \brief Cancel to switch multi-share to single share. All sharing will be remained.
 	virtual SDKError Cancel() = 0;
 
-	/// \brief Switch multi-share to single share. All sharing will be remained.
+	/// \brief Switch multi-share to single share. All sharing will be stopped.
 	virtual SDKError Confirm() = 0;
 
 	virtual ~IShareSwitchMultiToSingleConfirmHandler() {};
@@ -257,6 +239,7 @@ public:
 	/// \return If the function succeeds, the return value is SDKErr_Success.
 	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
 	/// \remarks Valid only for ZOOM style user interface mode.
+	/// \deprecated This interface is marked as deprecated
 	virtual SDKError ViewShare(unsigned int userid, SDKViewType type) = 0;
 
 	/// \brief Start sharing with White board.
@@ -333,13 +316,20 @@ public:
 	/// \param [out] shareSource Store the viewable sharing information. For more details, see \link ViewableShareSource \endlink structure.
 	/// \return If the function succeeds, the return value is SDKErr_Success.
 	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
-	/// \remarks Valid for both ZOOM style and user custom interface mode.
+	/// \remarks Valid for both ZOOM style and user custom interface mode. 
+	/// For custom interface mode, this interface is only valid after subscribing the sharing content from the specified user by calling ICustomizedShareRender::SetUserID(unsigned int userid) successfully.
 	virtual SDKError GetViewableShareSourceByUserID(unsigned int userid, ViewableShareSource& shareSource) = 0;
 
 	/// \brief Determine if it is able to share. 
 	/// \return Enable or disable to start sharing.
 	/// \remarks Valid for both ZOOM style and user custom interface mode.
+	/// \deprecated This interface is marked as deprecated, and is replaced by CanStartShare(CannotShareReasonType& reason).
 	virtual bool CanStartShare() = 0;
+
+	/// \brief Determine whether the current meeting can start sharing. 
+	/// \param [out] reason The reason that no one can start sharing. See \link CannotShareReasonType \endlink enum.
+	/// \return True indicates you can start sharing.
+	virtual bool CanStartShare(CannotShareReasonType& reason) = 0;
 
 	/// \brief Determine if it is able to share desktop in the current meeting.
 	/// \return True indicates it is able to share desktop in the current meeting. False not.
@@ -433,7 +423,28 @@ public:
 	/// \brief Determine whether the user can share video files.
 	/// \return True indicates that the user can share video files. Otherwise False.
 	virtual bool CanShareVideoFile() = 0;
+
 #if defined(WIN32)
+	/// \brief Determine whether the user can share to the breakout room.
+	/// \return True indicates that the user can share to the breakout room.
+	///Otherwise the function fails. To get extended error information, see \link SDKError \endlink enum.
+	/// \remarks Valid for user custom interface mode only.	
+	virtual SDKError CanEnableShareToBO(bool& bCan) = 0;
+
+	/// \brief Set to enable sharing to the breakout room. 
+	/// \param bEnable TRUE indicates to enable. FALSE indicates that sharing to the breakout room is not enabled.
+	/// \return If the function succeeds, the return value is SDKERR_SUCCESS.
+	///Otherwise the function fails. To get extended error information, see \link SDKError \endlink enum.
+	/// \remarks Valid for user custom interface mode only.	
+	virtual SDKError EnableShareToBO(bool bEnable) = 0;
+
+	/// \brief Determine if sharing to the breakout room is enabled. 
+	/// \param bEnabled TRUE indicates that the sharing is locked. 
+	/// \return If the function succeeds, the return value is SDKERR_SUCCESS.
+	///Otherwise the function fails. To get extended error information, see \link SDKError \endlink enum.
+	/// \remarks Valid for user custom interface mode only.	
+	virtual SDKError IsShareToBOEnabled(bool& bEnabled) = 0;
+
 	/// \brief Share the video file.
 	/// \param filePath Specify the video file path. Only supports mov, mp4, or avi format.
 	/// \return If the function succeeds, the return value is SDKErr_Success.

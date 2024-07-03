@@ -33,6 +33,16 @@ enum VideoConnectionQuality
 	VideoConnectionQuality_Good, //The video quality is good.
 };
 
+typedef struct tagVideoSize
+{
+	int width;
+	int height;
+	tagVideoSize()
+	{
+		memset(this, 0, sizeof(tagVideoSize));   
+	}
+}VideoSize;
+
 /// \brief set video order helper interface.
 ///
 class ISetVideoOrderHelper
@@ -74,6 +84,41 @@ public:
 	
 	/// \brief Ignore the request to enable the video in the meeting and finally the instance self-destroys.
 	virtual SDKError Cancel() = 0;
+};
+
+/*! \enum CameraControlRequestType
+	\brief The camera control request type.
+	Here are more detailed structural descriptions.
+*/
+enum CameraControlRequestType
+{
+	CameraControlRequestType_Unknown = 0,
+	CameraControlRequestType_RequestControl,
+	CameraControlRequestType_GiveUpControl,
+};
+
+/*! \enum CameraControlRequestResult
+	\brief The camera control request result.
+	Here are more detailed structural descriptions.
+*/
+enum CameraControlRequestResult
+{
+	CameraControlRequestResult_Approve,
+	CameraControlRequestResult_Decline,
+	CameraControlRequestResult_Revoke,
+};
+
+/// \brief Camera control request.
+class ICameraControlRequestHandler
+{
+public:
+	virtual ~ICameraControlRequestHandler() {};
+
+	/// \brief Instance to accept the requirement.
+	virtual SDKError Approve() = 0;
+
+	/// \brief Instance to decline the requirement and finally self-destroy.
+	virtual SDKError Decline() = 0;
 };
 
 /// \brief Meeting video controller event callback
@@ -127,6 +172,18 @@ public:
 	/// \brief Callback event of video alpha channel mode changes.
 	/// \param isAlphaModeOn true means it's in alpha channel mode. Otherwise, it's not.
 	virtual void onVideoAlphaChannelStatusChanged(bool isAlphaModeOn) = 0;
+
+	/// \brief Callback for when the current user receives a camera control request.
+	/// \This callback will be triggered when another user requests control of the current user's camera.
+	/// \param userId The user ID that sent the request
+	/// \param requestType The request type. For more details, see \link CameraControlRequestType \endlink enum.
+	/// \param pHandler A pointer to the ICameraControlRequestHandler. For more details, see \link ICameraControlRequestHandler \endlink.
+	virtual void onCameraControlRequestReceived(unsigned int userId, CameraControlRequestType requestType, ICameraControlRequestHandler* pHandler) = 0;
+
+	/// \brief Callback for when the current user is granted camera control access.
+	/// \param userId The user ID that accepted the request
+	/// \param isApproved The result of the camera control request.
+	virtual void onCameraControlRequestResult(unsigned int userId, CameraControlRequestResult result) = 0;
 };
 
 enum PinResult
@@ -152,6 +209,69 @@ enum SpotlightResult
 	SpotResult_Fail_UserNotSpotlighted, ///user is not spotlighted
 	SpotResult_Unknown = 100,
 };
+
+/// \brief Meeting camera helper interface
+///
+class IMeetingCameraHelper
+{
+public:
+	virtual ~IMeetingCameraHelper() {}
+
+	/// \brief Gets the current controlled user ID.
+	/// \return If the function succeeds, the return value is the user ID. Otherwise, this returns 0.
+	virtual unsigned int GetUserId() = 0;
+
+	/// \brief Whether the camera can be controlled or not.
+	/// \return true if the user can control camera, false if they can't.
+	virtual bool CanControlCamera() = 0;
+
+	/// \brief Request to control remote camera.	
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise the function fails. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError RequestControlRemoteCamera() = 0;
+
+	/// \brief Give up control of the remote camera.	
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise the function fails. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError GiveUpControlRemoteCamera() = 0;
+
+	/// \brief Turn the camera to the left.
+	/// \param range Rotation range,  10 <= range <= 100.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise the function fails. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError TurnLeft(unsigned int range = 50) = 0;
+
+	/// \brief Turn the camera to the right.
+	/// \param range Rotation range,  10 <= range <= 100.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise the function fails. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError TurnRight(unsigned int range = 50) = 0;
+
+	/// \brief Turn the camera up.
+	/// \param range Rotation range,  10 <= range <= 100.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise the function fails. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError TurnUp(unsigned int range = 50) = 0;
+
+	/// \brief Turn the camera down.
+	/// \param range Rotation range,  10 <= range <= 100.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise the function fails. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError TurnDown(unsigned int range = 50) = 0;
+
+	/// \brief Zoom the camera in.
+	/// \param range Rotation range,  10 <= range <= 100.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise the function fails. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError ZoomIn(unsigned int range = 50) = 0;
+
+	/// \brief Zoom the camera out.
+	/// \param range Rotation range,  10 <= range <= 100.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise the function fails. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError ZoomOut(unsigned int range = 50) = 0;
+};
+
 /// \brief Meeting video controller interface
 ///
 class IMeetingVideoController
@@ -368,6 +488,15 @@ public:
 	virtual bool IsShowAvatar() = 0;
 #endif
 
+	/// \brief Get camera helper interface.
+	/// \return If the function succeeds, the return value is a pointer to IMeetingCameraHelper. Otherwise returns NULL.
+	virtual IMeetingCameraHelper* GetMeetingCameraHelper(unsigned int userid) = 0;
+
+	/// \brief Revoke camera control privilege.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError RevokeCameraControlPrivilege() = 0;
+
 	/// \brief Determine if alpha channel mode can be enabled. 
 	/// \return true means it can be enabled. Otherwise false.
 	virtual bool CanEnableAlphaChannelMode() = 0;
@@ -381,6 +510,11 @@ public:
 	/// \brief Determine if alpha channel mode is enabled.
 	/// \return True indicates alpha channel mode is enabled. Otherwise false.
 	virtual bool IsAlphaChannelModeEnabled() = 0;
+
+	/// \brief Get the size of user's video.
+	/// \param userid Specifies the user ID. The user id should be 0 when not in meeting.
+	/// \return The size of user's video.
+	virtual VideoSize GetUserVideoSize(unsigned int userid) = 0;
 };
 END_ZOOM_SDK_NAMESPACE
 #endif

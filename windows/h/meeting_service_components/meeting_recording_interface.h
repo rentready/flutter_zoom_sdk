@@ -34,6 +34,16 @@ enum RequestLocalRecordingStatus
 	RequestLocalRecording_Timeout,///the request local recording timeout.	
 };
 
+/*! \enum RequestStartCloudRecordingStatus
+	\brief Request host to start cloud recording status.
+*/
+enum RequestStartCloudRecordingStatus
+{
+	RequestStartCloudRecording_Granted,///host grants the request.
+	RequestStartCloudRecording_Denied,///host denies the request.
+	RequestStartCloudRecording_TimedOut,///the request for cloud recording timed out.	
+};
+
 enum LocalRecordingRequestPrivilegeStatus
 {
 	LocalRecordingRequestPrivilege_None,
@@ -65,6 +75,82 @@ public:
 	/// \brief Denies the user permission to start local recording and finally self-destroy.
 	virtual SDKError DenyLocalRecordingPrivilege() = 0;
 };
+
+/// \brief Object to handle a user's request to start cloud recording.
+/// \remarks If current user can control web setting for smart recording, they will get IRequestEnableAndStartSmartRecordingHandler or ISmartRecordingEnableActionHandler when attendee request to start cloud recording or start cloud recording by self.
+class IRequestStartCloudRecordingHandler
+{
+public:
+	virtual ~IRequestStartCloudRecordingHandler() {};
+	/// \brief Get the user ID who requested that the host start cloud recording.
+	/// \return If the function succeeds, the return value is the user ID. Otherwise, this returns 0.
+	virtual unsigned int GetRequesterId() = 0;
+
+	/// \brief Get the user name who requested that the host start cloud recording.
+	/// \return If the function succeeds, the return value is the user name.
+	virtual const zchar_t* GetRequesterName() = 0;
+
+	/// \brief Accept the request to start cloud recording and then destroys the IRequestCloudRecordingHandler instance.
+	virtual SDKError Start() = 0;
+
+	/// \brief Deny the request to start cloud recording and then destroys the IRequestCloudRecordingHandler instance.
+	/// \param bDenyAll TRUE indicates to deny all requests. Participants can't send requests again until the host change the setting.
+	virtual SDKError Deny(bool bDenyAll) = 0;
+};
+
+/// \brief Enable and start smart cloud recording request handler
+class IRequestEnableAndStartSmartRecordingHandler
+{
+public:
+	virtual ~IRequestEnableAndStartSmartRecordingHandler() {};
+	/// \brief Get the user ID who requests to enable and start smart cloud recording.
+	/// \return If the function succeeds, the return value is the user ID.
+	virtual unsigned int GetRequestUserId() = 0;
+
+	/// \brief Get the legal tip that you should agree to handle the user request.
+	/// \return If the function succeeds, the return value is the legal notice about enabling and starting smart cloud recording.
+	virtual const zchar_t* GetTipString() = 0;
+
+	/// \brief Start normal cloud recording without enabling smart recording.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError StartCloudRecordingWithoutEnableSmartRecording() = 0;
+
+	/// \brief Agree to the legal notice to enable and start smart cloud recording.
+	/// \param bAllMeetings True indicates to enable smart recording for all future meetings including the current meeting. False indicates to only enable smart recording for the current meeting.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError AgreeToEnableAndStart(bool bAllMeetings) = 0;
+
+	/// \brief Decline the request to start cloud recording.
+	/// \param bDenyAll True indicates to deny all attendees' requests for the host to start cloud recording. Participants can't send these types of requests again until the host change the setting.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError Decline(bool bDenyAll) = 0;
+};
+
+/// \brief Enable and start smart recording.
+class ISmartRecordingEnableActionHandler
+{
+public:
+	virtual ~ISmartRecordingEnableActionHandler() {};
+
+	/// \brief Get the legal tip to enable smart recording.
+	/// \return The legal notice.
+	virtual const zchar_t* GetTipString() = 0;
+
+	/// \brief Confirm enabling and starting the smart recording.
+	/// \param bAllMeetings True indicates to enable smart recording for all future meetings including the current meeting. False indicates to only enable smart recording for the current meeting.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError ActionConfirm(bool bAllMeetings) = 0;
+
+	/// \brief Cancel enabling and starting the smart recording
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError ActionCancel() = 0;
+};
+
 #if defined(WIN32)
 class ICustomizedLocalRecordingLayoutHelper;
 #endif
@@ -91,11 +177,18 @@ public:
 	/// \param status Value of request local recording privilege status. For more details, see \link RequestLocalRecordingStatus \endlink enum.
 	virtual void onLocalRecordingPrivilegeRequestStatus(RequestLocalRecordingStatus status) = 0;
 
-	
+	/// \brief Callback event for when the host responds to a cloud recording permission request
+	/// \param status Value of request host to start cloud recording response status. For more details, see \link RequestStartCloudRecordingStatus \endlink enum.
+	virtual void onRequestCloudRecordingResponse(RequestStartCloudRecordingStatus status) = 0;
+
 	/// \brief Callback event when a user requests local recording privilege.
 	/// \param handler A pointer to the IRequestLocalRecordingPrivilegeHandler. For more details, see \link IRequestLocalRecordingPrivilegeHandler \endlink.
 	virtual void onLocalRecordingPrivilegeRequested(IRequestLocalRecordingPrivilegeHandler* handler) = 0;
 	
+	/// \brief Callback event received only by the host when a user requests to start cloud recording.
+	/// \param handler A pointer to the IRequestStartCloudRecordingHandler. For more details, see \link IRequestStartCloudRecordingHandler \endlink.
+	virtual void onStartCloudRecordingRequested(IRequestStartCloudRecordingHandler* handler) = 0;
+
 #if defined(WIN32)
 	/// \brief Callback event of ending the conversion to MP4 format.
 	/// \param bsuccess TRUE indicates to convert successfully. FALSE not.
@@ -118,6 +211,14 @@ public:
 	 /// \brief Callback event that the cloud recording storage is full.
 	 /// \param gracePeriodDate a point in time, in milliseconds, in UTC. You can use the cloud recording storage until the gracePeriodDate.
 	virtual void onCloudRecordingStorageFull(time_t gracePeriodDate) = 0;
+
+	/// \brief Callback event received only by the host when a user requests to enable and start smart cloud recording.
+	/// \param handler A pointer to the IRequestEnableAndStartSmartRecordingHandler. For more details, see \link IRequestEnableAndStartSmartRecordingHandler \endlink.
+	virtual void onEnableAndStartSmartRecordingRequested(IRequestEnableAndStartSmartRecordingHandler* handler) = 0;
+
+	/// \brief Callback event received when you call \link EnableSmartRecording \endlink. You can use the handler to confirm or cancel enabling the smart recording.
+	/// \param handler A pointer to the ISmartRecordingEnableActionHandler. For more details, see \link ISmartRecordingEnableActionHandler \endlink.
+	virtual void onSmartRecordingEnableActionCallback(ISmartRecordingEnableActionHandler* handler) = 0;
 };
 
 /// \brief Meeting recording controller interface.
@@ -141,6 +242,11 @@ public:
 	///Otherwise it fails and the request will not be sent. To get extended error information, see \link SDKError \endlink enum.
 	virtual SDKError RequestLocalRecordingPrivilege() = 0;
 
+	/// \brief Send a request to ask the host to start cloud recording.
+	/// \return If the function succeeds, the return value is SDKErr_Success and the SDK sends the request.
+	///Otherwise it fails and the request is not sent. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError RequestStartCloudRecording() = 0;
+
 	/// \brief Start recording.
 	/// \param [out] startTimestamp The timestamps when start recording.
 	/// \return If the function succeeds, the return value is SDKErr_Success.
@@ -160,6 +266,19 @@ public:
 	///If the value of cloud_recording is set to FALSE and the local recording is enabled, the return value is SDKErr_Success.
 	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
 	virtual SDKError CanStartRecording(bool cloud_recording, unsigned int userid) = 0;
+
+	/// \brief Determine if the smart recording feature is enabled in the meeting.
+	/// \return true means that the feature enabled, false means that the feature isn't enabled.
+	virtual bool IsSmartRecordingEnabled() = 0;
+
+	/// \brief Whether the current user can enable the smart recording feature.
+	/// \return true means the current user can enable the smart recording feature.
+	virtual bool CanEnableSmartRecordingFeature() = 0;
+
+	/// \brief Enable the smart recording feature.
+	/// \return If the function succeeds, the return value is SDKERR_SUCCESS.
+	///Otherwise the function fails. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError EnableSmartRecording() = 0;
 
 	/// \brief Determine if the current user own the authority to change the recording permission of the others.
 	/// \return If the user own the authority, the return value is SDKErr_Success.

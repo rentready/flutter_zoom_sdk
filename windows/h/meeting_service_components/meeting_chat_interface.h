@@ -243,6 +243,79 @@ typedef enum
 	SDK_CHAT_DELETE_BY_DLP,		/// delete by dlp when the message goes against the host organization's compliance policies.
 }SDKChatMessageDeleteType;
 
+
+typedef enum
+{
+	SDKFileTransferState_None = 0,         ///< The file transfer has no state.
+	SDKFileTransferState_ReadyToTransfer,  ///< The file transfer is ready to start.
+	SDKFileTransferState_Transfering,      ///< The file transfer is in progress.
+	SDKFileTransferState_TransferFailed,   ///< The file transfer failed.
+	SDKFileTransferState_TransferDone,     ///< The file transfer completed successfully.
+}SDKFileTransferStatus;
+
+/// \brief The basic information of transfer file
+typedef struct tagSDKFileTransferInfo
+{
+	const zchar_t* messageID;///<The message identify of transfer file.
+	SDKFileTransferStatus trans_status;///< he status of the file transfer.
+	time_t time_stamp;///<The time stamp of the file.
+	bool is_send_to_all;///<Is the file send to all user in meeting?
+	unsigned int file_size;///<The bytes of transfer file size.
+	const zchar_t* file_name;///<the file name of transfer file.
+	unsigned int complete_percentage;///<The percentage of the file transfer completed.
+	unsigned int complete_size;///<The size of the file transferred so far in bytes.
+	unsigned int bit_per_second;///<The speed of the file transfer in bits per second.
+	tagSDKFileTransferInfo()
+	{
+		Reset();
+	}
+
+	void Reset()
+	{
+		memset(this, 0, sizeof(tagSDKFileTransferInfo));  //checked safe
+	}
+}SDKFileTransferInfo;
+
+class ISDKFileSender
+{
+public:
+	virtual SDKFileTransferInfo* GetTransferInfo() = 0;
+	/// \brief Get file receiver's user id.
+	/// \return The receiver user id. -1 specify the internel error of get user id. 0 specify the file send to all.
+	virtual unsigned int GetReceiver() = 0;
+
+	/// \brief Cancel the file send.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError CancelSend() = 0;
+
+	virtual ~ISDKFileSender() {};
+};
+
+class ISDKFileReceiver
+{
+public:
+	virtual SDKFileTransferInfo* GetTransferInfo() = 0;
+
+	/// \brief Get file sender's user id.
+	/// \return The receiver user id. -1 specify the internel error of get user id. 0 specify the file send to all.
+	virtual unsigned int GetSender() = 0;
+
+	/// \brief Cancel the file receive.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError CancelReceive() = 0;
+
+	/// \brief Start receive the file.
+	/// \param path The path to receive the file.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
+	virtual SDKError StartReceive(const zchar_t* path) = 0;
+
+	virtual ~ISDKFileReceiver() {};
+};
+
+
 /// \brief Meeting chat callback event.
 ///
 class IMeetingChatCtrlEvent
@@ -265,6 +338,19 @@ public:
 	virtual void onChatMsgDeleteNotification(const zchar_t* msgID, SDKChatMessageDeleteType deleteBy) = 0;
 
 	virtual void onShareMeetingChatStatusChanged(bool isStart) = 0;
+
+	/// \brief Invoked when start send file.
+	/// \param sender The class to send file object.
+	virtual void onFileSendStart(ISDKFileSender* sender) = 0;
+
+	/// \brief Invoked when receiving a file from another user.
+	/// \param receiver The class to receive the file object.
+	virtual void onFileReceived(ISDKFileReceiver* receiver) = 0;
+
+	/// \brief Invoked when send or receive file status change.
+	/// \param info The class to basic transfer information.
+	virtual void onFileTransferProgress(SDKFileTransferInfo* info) = 0;
+
 };
 
 /// \brief Chat message builder to create ChatMsgInfo objects.
@@ -329,16 +415,6 @@ public:
 	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
 	virtual SDKError SetParticipantsChatPrivilege(SDKChatPrivilege privilege) = 0;
 
-	/// \brief Send chat message in the normal meeting.
-	/// \param receiver Specify the user ID who receives the chat message. The message will be sent to all when the value is zero(0). 
-	/// \param content The content of the chat message. 
-	/// \param type The type of the chat message
-	/// \param mapOffset the special style content offset of the chat message content
-	/// \return If the function succeeds, the return value is SDKErr_Success.
-	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
-	/// \deprecated This interface will be marked as deprecated, then it will be instead by SendChatMsgTo(IChatMsgInfo* msg), please stop using it.
-	virtual SDKError SendChatMsgTo(const zchar_t* content, unsigned int receiver, SDKChatMessageType type) = 0;
-
 	/// \brief Determine whether the legal notice for chat is available
 	/// \return True indicates the legal notice for chat is available. Otherwise False.
 	virtual bool IsMeetingChatLegalNoticeAvailable() = 0;
@@ -383,6 +459,33 @@ public:
 	/// Send a chat message.
 	/// \param msg Specify the message detail info .
 	virtual SDKError SendChatMsgTo(IChatMsgInfo* msg) = 0;
+
+	/// \brief Determine whether file transfer is enabled.
+	/// \return True indicates file transfer is enabled, otherwise false.	
+	virtual bool IsFileTransferEnabled() = 0;
+
+	/// \brief Send file to specify user in current session.
+	/// \param filePath The absolute path of the file.
+	/// \param user Send the file to this user.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
+	/// \remark this interface is related to chat privilege, see \link SDKChatPrivilege \endlink enum.
+	virtual SDKError TransferFile(const zchar_t* filePath, unsigned int userid) = 0;
+
+	/// \brief Send file to all users in current session.
+	/// \param filePath The absolute path of the file.
+	/// \return If the function succeeds, the return value is SDKErr_Success.
+	///Otherwise failed. To get extended error information, see \link SDKError \endlink enum.
+	/// \remark this interface is related to chat privilege, see \link SDKChatPrivilege \endlink enum.
+	virtual SDKError TransferFileToAll(const zchar_t* filePath) = 0;
+
+	/// \brief Get the list of allowed file types in transfer.
+	/// \return The value of allowed file types in transfer, comma-separated if there are multiple values. Exe files are by default forbidden from being transferred.
+	virtual const zchar_t* GetTransferFileTypeAllowList() = 0;
+
+	/// \brief Get the maximum size for file transfer.
+	/// \return The maximum number of bytes for file transfer.
+	virtual unsigned long long GetMaxTransferFileSizeBytes() = 0;
 };
 END_ZOOM_SDK_NAMESPACE
 #endif
