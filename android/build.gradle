@@ -2,7 +2,7 @@ group 'com.evilratt.flutter_zoom_sdk'
 version '1.0'
 
 buildscript {
-    ext.zoomSdkVersion = '6.0.12.22275'
+    ext.zoomSdkVersion = '6.4.10.30380'
 
     repositories {
         google()
@@ -29,11 +29,11 @@ apply plugin: 'com.android.library'
 apply plugin: 'maven-publish'
 
 android {
-    compileSdkVersion 34
+    compileSdkVersion 35
 
     defaultConfig {
         minSdkVersion 26
-        targetSdkVersion 34
+        targetSdkVersion 35
         vectorDrawables.useSupportLibrary = true
         multiDexEnabled true
         consumerProguardFiles 'proguard-rules.pro'
